@@ -1,8 +1,9 @@
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin, BaseUserManager
 from django.db import models
-from django.utils import timezone
-
+from rest_framework_simplejwt.tokens import RefreshToken
+from datetime import timedelta, datetime
+from django.conf import settings
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, first_name, last_name, password, password2, **kwargs):
@@ -29,7 +30,7 @@ class CustomUserManager(BaseUserManager):
         user.save()
         return user
 
-    def create_superuser(self, email, first_name, last_name, password, password2, **kwargs):
+    def create_superuser(self, email, first_name, last_name, password, **kwargs):
         kwargs.setdefault('is_staff', True)
         kwargs.setdefault('is_active', True)
         kwargs.setdefault('is_superuser', True)
@@ -40,7 +41,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('A superuser must be assigned to is_superuser=True')
 
         del kwargs['is_superuser'], kwargs['is_staff']
-        superuser = self.create_user(email, first_name, last_name, password, **kwargs)
+        superuser = self.create_user(email, first_name, last_name, password, password2=None,**kwargs)
         superuser.is_superuser = True
         superuser.is_staff = True
         superuser.save()
@@ -74,3 +75,29 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def get_full_name(self):
         return "%s %s" % (self.first_name, self.last_name)
+
+    def get_tokens_for_user(self):
+        refresh = RefreshToken.for_user(self)
+
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+
+class LoginSession(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    login_start = models.DateTimeField(auto_now_add=True)
+
+    def is_session_expired(self):
+        login_object_end = self.login_start + settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+        current_time = datetime.now(self.login_start.tzinfo)
+        return login_object_end < current_time
+
+    def __str__(self):
+        return self.user.email
+
+
+
+
+

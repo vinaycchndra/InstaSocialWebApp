@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser
+from .models import CustomUser, LoginSession
 from django.contrib.auth.admin import UserAdmin
 
 
@@ -21,3 +21,5 @@ class CustomUserAdmin(UserAdmin):
 
 
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(LoginSession)
+
