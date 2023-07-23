@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from user.models import CustomUser
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -41,4 +42,23 @@ class LoginSerializer(serializers.Serializer):
         if user and user.is_active:
             return user
         raise serializers.ValidationError("Incorrect Credentials")
+
+
+class UpdatePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(style={'input_type': 'password', 'write_only': True})
+    new_password1 = serializers.CharField(style={'input_type': 'password', 'write_only': True})
+    new_password2 = serializers.CharField(style={'input_type': 'password', 'write_only': True})
+
+    def validate(self, data):
+        user = self.context.get('user')
+
+        if check_password(data['old_password'], user.password):
+            if data['new_password1'] != data['new_password2']:
+                raise serializers.ValidationError('Passwords does not Match')
+        else:
+            raise serializers.ValidationError('Old Password is Incorrect')
+
+        return data['new_password1']
+
+
 

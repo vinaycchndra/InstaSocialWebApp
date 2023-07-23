@@ -1,14 +1,13 @@
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserRegistrationSerializer, LoginSerializer
+from .serializers import UserRegistrationSerializer, LoginSerializer, UpdatePasswordSerializer
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from .models import LoginSession
-
+from instagram.CustomPermission import IsSessionActive
 
 class UserRegistrationView(APIView):
 
-    def post(self, request, format=None):
+    def post(self, request,):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
@@ -19,7 +18,7 @@ class UserRegistrationView(APIView):
 
 # Login Function
 class LoginView(APIView):
-    def post(self, request, format=None):
+    def get(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data
@@ -39,9 +38,9 @@ class LoginView(APIView):
 
 
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsSessionActive]
 
-    def post(self, request, format=None):
+    def post(self, request):
         try:
             session = LoginSession.objects.get(user__id=request.user.id)
             session.delete()
@@ -49,3 +48,19 @@ class LogoutView(APIView):
         except Exception as e:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+
+class UpdatePassword(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsSessionActive]
+
+    def post(self, request):
+        user = request.user
+        serializer = UpdatePasswordSerializer(data=request.data, context={'user': user})
+        if serializer.is_valid():
+            new_password = serializer.validated_data
+            user.set_password(new_password)
+            user.save()
+            session = LoginSession.objects.get(user__id=request.user.id)
+            session.delete()
+            return Response({"msg": "Your password has been updated Successfully"}, status=status.HTTP_205_RESET_CONTENT)
+        else:
+            return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
