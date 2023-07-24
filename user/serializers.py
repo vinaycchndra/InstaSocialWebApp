@@ -12,18 +12,29 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ['email', 'first_name', 'last_name', 'phone_number', 'date_of_birth', 'password', 'password2']
         extra_kwargs = {'password': {'write_only': True}}
 
+    def validate_phone_number(self, value):
+        for char in value:
+            if 65 <= ord(char) <= 90 or 97 <= ord(char) <= 122:
+                raise serializers.ValidationError('Should not Contain an alphabet !!!')
+        return value
+
+    def validate_first_name(self, value):
+        if value is None or len(value)==0:
+            raise serializers.ValidationError('First Name is Mandaroty')
+        return value
+
+    def validate_last_name(self, value):
+        if value is None or len(value)==0:
+            raise serializers.ValidationError('Last Name is Mandaroty')
+        return value
+    def validate_date_of_birth(self, value):
+        if value is None:
+            raise serializers.ValidationError('Date is mandetory')
+        return value
+
     def validate(self, attrs):
         password = attrs.get('password')
         password2 = attrs.get('password2')
-
-        if attrs.get('first_name') is None:
-            raise serializers.ValidationError('First Name is Mandaroty')
-
-        if attrs.get('last_name') is None:
-            raise serializers.ValidationError('Last Name is Mandaroty')
-
-        if attrs.get('date_of_birth') is None:
-            raise serializers.ValidationError('Date of Birth is Mandaroty')
 
         if password2 != password:
             raise serializers.ValidationError('Password and Confirm Password are not same !!!')

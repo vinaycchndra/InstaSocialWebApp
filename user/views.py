@@ -9,11 +9,23 @@ class UserRegistrationView(APIView):
 
     def post(self, request,):
         serializer = UserRegistrationSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
+        if serializer.is_valid():
             user = serializer.save()
             return Response({'message': 'Registration Successfull'}, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            error_msg = serializer.__dict__['_kwargs']['data'].copy()
+            error_msg['extra_error'] = ""
+            for field in error_msg:
+                if field in serializer.errors:
+                    error_msg[field] = str(serializer.errors[field][0])
+                else:
+                    error_msg[field] = ""
+            print(serializer.errors)
+            if 'non_field_errors' in serializer.errors:
+                error_msg['extra_error'] = str(serializer.errors['non_field_errors'][0])
+
+            return Response(error_msg, status=status.HTTP_400_BAD_REQUEST)
 
 
 # Login Function
