@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from .models import LoginSession
 from instagram.CustomPermission import IsSessionActive
 
+
 class UserRegistrationView(APIView):
 
     def post(self, request,):
