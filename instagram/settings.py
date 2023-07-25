@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'user',
     'InstaService',
+    'UserFeedService',
 ]
 
 MIDDLEWARE = [
@@ -74,13 +75,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'instagram.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+DATABASE_ROUTERS = ["instagram.Router.FeedRouter", "instagram.Router.OtherRouter"]
 DATABASES = {
-    'default': {
+    'default': {},
+
+    'auth_db': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db_auth.sqlite3',
+    },
+    'db_feed': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db_feed.sqlite3',
     }
 }
 
