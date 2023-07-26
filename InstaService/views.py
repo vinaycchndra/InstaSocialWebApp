@@ -1,9 +1,10 @@
 from rest_framework.views import APIView
 from instagram.CustomPermission import IsSessionActive
-from .serializers import CreatePostSerializer, UpdatePostSerializer
+from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Posts
+from .models import Posts, Followers
+from user.models import CustomUser
 
 
 # function to get errors from the serializer object
@@ -57,7 +58,8 @@ class InstaPost(APIView):
         if post_obj:
             if request.user.id == post_obj.posted_by.id:
                 post_obj.delete()
-                return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}}, status=status.HTTP_204_NO_CONTENT)
+                return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}},
+                                status=status.HTTP_204_NO_CONTENT)
 
             return Response({'data': {}, 'msg': 'You do not have permission to edit this post', 'error_msg': {}},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -69,5 +71,45 @@ class InstaPost(APIView):
         try:
             obj = Posts.objects.get(id=pk)
         except Posts.DoesNotExist:
+            obj = None
+        return obj
+
+
+# Follower class view implemented
+class FollowUserView(APIView):
+    permission_classes = [IsSessionActive]
+
+    def post(self, request, pk):
+        followed = self.get_user(pk)
+        if followed:
+            try:
+                follow_followee_obj = Followers.objects.get(followed__id=followed.id, followe_by__id=request.user.id)
+            except Followers.DoesNotExist:
+                follow_followee_obj = None
+
+            if follow_followee_obj:
+                follow_followee_obj.delete()
+                return Response({'msg': 'You have unfollowed {}!!!'.format(followed.get_full_name()),
+                                 'data': {}, 'error_msg': {}},
+                                status=status.HTTP_204_NO_CONTENT)
+            else:
+                data = request.data.copy()
+                data['followed'] = followed.id
+                data['followe_by'] = request.user.id
+                serializer = FollowerSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({'msg': 'You  successfully started following {}!!!'.format(followed.get_full_name()),
+                                     'data': serializer.data, 'error_msg': {}}, status=status.HTTP_201_CREATED)
+                return get_errors(serializer)
+
+        else:
+            return Response({'data': {}, 'msg': 'User does not exist', 'error_msg': {}},
+                            status=status.HTTP_404_NOT_FOUND)
+
+    def get_user(self, pk):
+        try:
+            obj = CustomUser.objects.get(id=pk)
+        except CustomUser.DoesNotExist:
             obj = None
         return obj

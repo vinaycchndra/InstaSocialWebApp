@@ -20,7 +20,7 @@ class Followers(models.Model):
     following_since = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return "%s is being followed by %s" % (self.followee.get_full_name(), self.follower.get_full_name())
+        return "%s is being followed by %s" % (self.followed.get_full_name(), self.followe_by.get_full_name())
 
 
 class Comments(models.Model):
