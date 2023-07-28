@@ -100,7 +100,7 @@ class FollowUserView(APIView):
                 # getting 10 recent posts of the person being followed
                 followed_id = serializer.data['followed']
                 followe_by_id = serializer.data['followe_by']
-                post_list = Posts.objects.filter(posted_by__id=followed_id)[:10].values_list('id', flat=True)
+                post_list = list(Posts.objects.filter(posted_by__id=followed_id)[:10].values_list('id', flat=True))
 
                 # passing tasks to the celery
                 add_feed.apply_async((post_list, followed_id, followe_by_id), countdown=0, retry=True,
