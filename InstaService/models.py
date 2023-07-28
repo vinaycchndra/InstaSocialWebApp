@@ -4,14 +4,18 @@ from user.models import CustomUser
 
 # Post Table
 class Posts(models.Model):
-    posted_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    posted_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
     message = models.CharField(max_length=1000, blank=True)
     image = models.ImageField(blank=False, upload_to='images/')
     create_time = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return 'Post by: '+self.posted_by.get_full_name()
+    class Meta:
+        ordering = ['-create_time']
 
+    def __str__(self):
+        if self.posted_by:
+            return 'Post by: '+self.posted_by.get_full_name()
+        return 'User has been deleted'
 
 # Follower Table: followee != follower
 class Followers(models.Model):

@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Posts, Followers
 from user.models import CustomUser
-from .tasks import add
+from UserFeedService.tasks import add_feed
 
 # function to get errors from the serializer object
 def get_errors(serializer):
@@ -68,6 +68,8 @@ class InstaPost(APIView):
         return obj
 
 
+
+
 # Follower class view implemented
 class FollowUserView(APIView):
     permission_classes = [IsSessionActive]
@@ -82,7 +84,7 @@ class FollowUserView(APIView):
 
             if follow_followee_obj:
                 follow_followee_obj.delete()
-                add.apply_async((2, 9), countdown=20)
+                #add_feed.apply_async((2, 12), countdown=20)
 
                 return Response({'msg': 'You have unfollowed {}!!!'.format(followed.get_full_name()),
                                  'data': {}, 'error_msg': {}},
@@ -94,6 +96,16 @@ class FollowUserView(APIView):
             serializer = FollowerSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
+
+                # getting 10 recent posts of the person being followed
+                followed_id = serializer.data['followed']
+                followe_by_id = serializer.data['followe_by']
+                post_list = Posts.objects.filter(posted_by__id=followed_id)[:10].values_list('id', flat=True)
+
+                # passing tasks to the celery
+                add_feed.apply_async((post_list, followed_id, followe_by_id), countdown=0, retry=True,
+                                     retry_policy={'max_retries': 3})
+
                 return Response({'msg': 'You  successfully started following {}!!!'.format(followed.get_full_name()),
                                  'data': serializer.data, 'error_msg': {}}, status=status.HTTP_201_CREATED)
             return get_errors(serializer)
@@ -106,3 +118,8 @@ class FollowUserView(APIView):
         except CustomUser.DoesNotExist:
             obj = None
         return obj
+
+
+
+
+
