@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Posts, Followers
 from user.models import CustomUser
-
+from .tasks import add
 
 # function to get errors from the serializer object
 def get_errors(serializer):
@@ -82,6 +82,8 @@ class FollowUserView(APIView):
 
             if follow_followee_obj:
                 follow_followee_obj.delete()
+                add.apply_async((2, 9), countdown=20)
+
                 return Response({'msg': 'You have unfollowed {}!!!'.format(followed.get_full_name()),
                                  'data': {}, 'error_msg': {}},
                                 status=status.HTTP_204_NO_CONTENT)
