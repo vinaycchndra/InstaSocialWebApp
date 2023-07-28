@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Posts, Followers
 from user.models import CustomUser
-from UserFeedService.tasks import add_feed
+from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
+
 
 # function to get errors from the serializer object
 def get_errors(serializer):
@@ -24,6 +25,15 @@ class InstaPost(APIView):
         serializer = CreatePostSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
+
+            # Getting the list of all the followers of the user
+            post_id = serializer.data['id']
+            user_id = serializer.data['posted_by']
+            all_follower_ids = list(Followers.objects.filter(followed__id=user_id).values_list('followe_by', flat=True))
+            # Task invocation to add post into all the followers' feed
+            after_post_feed.apply_async((post_id, all_follower_ids, user_id), countdown=0, retry=True,
+                                        retry_policy={'max_retries': 3})
+
             return Response({'msg': 'Post created successfully !!!', 'data': serializer.data, 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         return get_errors(serializer)
@@ -53,6 +63,10 @@ class InstaPost(APIView):
         if post_obj:
             if request.user.id == post_obj.posted_by.id:
                 post_obj.delete()
+
+                # task to remove all the stream objects which have post_id which is deleted by now
+                remove_deleted_post.apply_async((pk,), countdown=0, retry=True,
+                                                retry_policy={'max_retries': 3})
                 return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}},
                                 status=status.HTTP_204_NO_CONTENT)
             return Response({'data': {}, 'msg': 'You do not have permission to edit this post', 'error_msg': {}},
@@ -66,8 +80,6 @@ class InstaPost(APIView):
         except Posts.DoesNotExist:
             obj = None
         return obj
-
-
 
 
 # Follower class view implemented
@@ -84,7 +96,10 @@ class FollowUserView(APIView):
 
             if follow_followee_obj:
                 follow_followee_obj.delete()
-                #add_feed.apply_async((2, 12), countdown=20)
+
+                # Removing all the posts of the unfollowed user from the user's feed
+                remove_feed.apply_async((followed.id, request.user.id), countdown=0, retry=True,
+                                        retry_policy={'max_retries': 3})
 
                 return Response({'msg': 'You have unfollowed {}!!!'.format(followed.get_full_name()),
                                  'data': {}, 'error_msg': {}},
