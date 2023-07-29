@@ -30,6 +30,7 @@ class InstaPost(APIView):
             post_id = serializer.data['id']
             user_id = serializer.data['posted_by']
             all_follower_ids = list(Followers.objects.filter(followed__id=user_id).values_list('followe_by', flat=True))
+
             # Task invocation to add post into all the followers' feed
             after_post_feed.apply_async((post_id, all_follower_ids, user_id), countdown=0, retry=True,
                                         retry_policy={'max_retries': 3})
@@ -67,6 +68,7 @@ class InstaPost(APIView):
                 # task to remove all the stream objects which have post_id which is deleted by now
                 remove_deleted_post.apply_async((pk,), countdown=0, retry=True,
                                                 retry_policy={'max_retries': 3})
+
                 return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}},
                                 status=status.HTTP_204_NO_CONTENT)
             return Response({'data': {}, 'msg': 'You do not have permission to edit this post', 'error_msg': {}},

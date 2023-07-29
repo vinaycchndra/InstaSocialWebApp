@@ -9,6 +9,7 @@ urlpatterns = [
     path('api/user/', include('user.urls')),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/post/', include('InstaService.urls')),
+    path('api/post/', include('UserFeedService.urls')),
 ]
 
 if settings.DEBUG:
