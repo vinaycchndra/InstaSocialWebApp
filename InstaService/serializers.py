@@ -6,7 +6,7 @@ from .models import Posts, Followers
 class CreatePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Posts
-        fields = ['id', 'posted_by', 'message', 'image']
+        fields = ['id', 'posted_by', 'message', 'image', 'create_time']
 
 
 # Update Post Serializer
