@@ -54,3 +54,12 @@ class Likes(models.Model):
             s = "%s liked %s's comment" % (self.user.get_full_name(), self.parent_comment_id.user.get_full_name())
 
         return s
+
+
+class Notification(models.Model):
+    notification = models.CharField(max_length=1000)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+
