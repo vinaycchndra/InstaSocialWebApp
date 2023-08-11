@@ -41,17 +41,16 @@ class Comments(models.Model):
 
 # Like table for both
 class Likes(models.Model):
-    parent_post_id = models.ForeignKey(Posts, on_delete=models.CASCADE, blank=True)
-    parent_comment_id = models.ForeignKey(Comments, on_delete=models.CASCADE, blank=True)
+    parent_post_id = models.ForeignKey(Posts, on_delete=models.CASCADE, blank=True, null=True)
+    parent_comment_id = models.ForeignKey(Comments, on_delete=models.CASCADE, blank=True, null=True)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        if self.parent_comment_id==None:
+        if self.parent_comment_id is None:
             s = "%s liked  %s's  post" % (self.user.get_full_name(), self.parent_post_id.posted_by.get_full_name())
         else:
             s = "%s liked %s's comment" % (self.user.get_full_name(), self.parent_comment_id.user.get_full_name())
-
         return s
 
 

@@ -3,12 +3,12 @@ from instagram.CustomPermission import IsSessionActive
 from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Posts, Followers
+from .models import Posts, Followers, Likes
 from user.models import CustomUser
 from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
 from .tasks import create_and_push_notification
 
-# function to get errors from the serializer object
+
 def get_errors(serializer):
     error_msg = {}
     for field in serializer.errors:
@@ -89,7 +89,7 @@ class InstaPost(APIView):
         return obj
 
 
-# Follower class view implemented
+# Follo and Unfollow a User class view is implemented here...
 class FollowUserView(APIView):
     permission_classes = [IsSessionActive]
 
@@ -140,6 +140,28 @@ class FollowUserView(APIView):
         except CustomUser.DoesNotExist:
             obj = None
         return obj
+
+
+# Class view to like or dislike a post
+class LikeDislikePost(APIView):
+    permission_classes = [IsSessionActive]
+
+    def post(self, request, pk):
+        # Looking if a post object exists which is to be liked
+        try:
+            post = Posts.objects.get(id=pk)
+        except Posts.DoesNotExist:
+            return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
+                            status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+
+        #  Looking if a user already Liked the post if it is than we delete the like
+        try:
+            like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
+            like.delete()
+        except Likes.DoesNotExist:
+            like = Likes.objects.create(parent_post_id=post, user=user)
+
 
 
 
