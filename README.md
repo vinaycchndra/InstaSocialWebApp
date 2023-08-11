@@ -10,4 +10,4 @@ queues with name that are defined in the task.py files of the installed apps wit
 for example: we have one que with name 'Feed_Service_Que' for adding posts of a followee to the feed of a new follower.
 
 And when starting a new celery worker we need to define all the queues names: 
-ex: celery -A instagram.celery worker --pool=solo  -l info -Q Feed_Service_Que,Post_Feed_Que
+ex: celery -A instagram.celery worker --pool=solo  -l info -Q Feed_Service_Que,Post_Feed_Que,Notification_Service_Que

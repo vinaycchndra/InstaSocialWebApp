@@ -172,6 +172,7 @@ SIMPLE_JWT = {
     "JTI_CLAIM": "jti"
 }
 
+# Channel layer configuration
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -180,3 +181,8 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# celery setting
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_TIMEZONE = 'UTC'

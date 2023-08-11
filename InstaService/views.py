@@ -6,7 +6,7 @@ from rest_framework import status
 from .models import Posts, Followers
 from user.models import CustomUser
 from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
-
+from .tasks import create_and_push_notification
 
 # function to get errors from the serializer object
 def get_errors(serializer):
@@ -31,10 +31,15 @@ class InstaPost(APIView):
             user_id = serializer.data['posted_by']
             all_follower_ids = list(Followers.objects.filter(followed__id=user_id).values_list('followe_by', flat=True))
 
-            # Task invocation to add post into all the followers' feed
+            # Task invocation to add post into all the followers' feed and pushing notification
             after_post_feed.apply_async((post_id, all_follower_ids, user_id), countdown=0, retry=True,
                                         retry_policy={'max_retries': 3})
 
+            # Task invocation to push notification into User's Notification section in real time...
+            user_obj = CustomUser.objects.get(id=user_id)
+            mssg = " %s just  posted..." % (user_obj.get_full_name())
+            create_and_push_notification.apply_async((mssg, all_follower_ids), countdown=0, retry=True,
+                                                     retry_policy={'max_retries': 3})
             return Response({'msg': 'Post created successfully !!!', 'data': serializer.data, 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         return get_errors(serializer)
@@ -105,7 +110,7 @@ class FollowUserView(APIView):
 
                 return Response({'msg': 'You have unfollowed {}!!!'.format(followed.get_full_name()),
                                  'data': {}, 'error_msg': {}},
-                                status=status.HTTP_204_NO_CONTENT)
+                                status=status.HTTP_200_OK)
 
             data = request.data.copy()
             data['followed'] = followed.id

@@ -47,7 +47,6 @@ class Likes(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-
         if self.parent_comment_id==None:
             s = "%s liked  %s's  post" % (self.user.get_full_name(), self.parent_post_id.posted_by.get_full_name())
         else:
@@ -60,6 +59,6 @@ class Notification(models.Model):
     notification = models.CharField(max_length=1000)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    is_seen = models.BooleanField(default=False)
 
 
