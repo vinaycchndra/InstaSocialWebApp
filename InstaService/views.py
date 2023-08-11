@@ -155,12 +155,46 @@ class LikeDislikePost(APIView):
                             status=status.HTTP_404_NOT_FOUND)
         user = request.user
 
-        #  Looking if a user already Liked the post if it is than we delete the like
+        #  Looking if a user already Liked the post if it is than we delete the like else we create a new like instance
         try:
             like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
             like.delete()
+            return Response({'data': {'liked': False}, 'msg': 'Disliked', 'error_msg': {}},
+                            status=status.HTTP_201_CREATED)
         except Likes.DoesNotExist:
             like = Likes.objects.create(parent_post_id=post, user=user)
+
+        return Response({'data': {'liked': True}, 'msg': 'Liked', 'error_msg': {}},
+                        status=status.HTTP_201_CREATED)
+
+
+# Class view to like or dislike a comment
+class LikeDislikeComment(APIView):
+    permission_classes = [IsSessionActive]
+
+    def post(self, request, pk):
+        # Looking if a post object exists which is to be liked
+        try:
+            post = Posts.objects.get(id=pk)
+        except Posts.DoesNotExist:
+            return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
+                            status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+
+        #  Looking if a user already Liked the post if it is than we delete the like else we create a new like instance
+        try:
+            like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
+            like.delete()
+            return Response({'data': {'liked': False}, 'msg': 'Disliked', 'error_msg': {}},
+                            status=status.HTTP_201_CREATED)
+        except Likes.DoesNotExist:
+            like = Likes.objects.create(parent_post_id=post, user=user)
+
+        return Response({'data': {'liked': True}, 'msg': 'Liked', 'error_msg': {}},
+                        status=status.HTTP_201_CREATED)
+
+
+
 
 
 
