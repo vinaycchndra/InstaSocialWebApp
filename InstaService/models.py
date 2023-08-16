@@ -30,7 +30,6 @@ class Followers(models.Model):
 class Comments(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     post = models.ForeignKey(Posts, on_delete=models.CASCADE)
-    is_picture = models.BooleanField(default=False)
     photo = models.ImageField(upload_to='images/', blank=True, null=True)
     comment = models.CharField(max_length=2000, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Posts, Followers
+from .models import Posts, Followers, Comments
 
 
 # Create Post Serializer
@@ -30,5 +30,17 @@ class FollowerSerializer(serializers.ModelSerializer):
         return attrs
 
 
+# Create Comment Serializer
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Comments
+        fields = ['user', 'post', 'photo', 'comment']
 
+    def validate(self, attrs):
+        photo = attrs.get('photo')
+        comment = attrs.get('comment')
+
+        if photo is None and comment is None:
+            raise serializers.ValidationError('Both comment and photo cannot be null')
+        return attrs
 

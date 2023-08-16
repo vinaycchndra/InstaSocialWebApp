@@ -11,3 +11,13 @@ for example: we have one que with name 'Feed_Service_Que' for adding posts of a 
 
 And when starting a new celery worker we need to define all the queues names: 
 ex: celery -A instagram.celery worker --pool=solo  -l info -Q Feed_Service_Que,Post_Feed_Que,Notification_Service_Que
+
+
+
+
+Developement Notes:
+1. Although there is a single model for the liking of both the types which are comment on the post or post itself we created two apis for liking either the post or comment 
+to remove the complexity of handling both the types because in our model we have parent_comment_id and parent_post_id for specifying like on the comment or like on the post.
+
+2. There is an API to send back all the comments on a particular post for any logged-in user which appears in either of user's feed or user sees it though other user's profile page....
+

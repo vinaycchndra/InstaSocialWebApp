@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from instagram.CustomPermission import IsSessionActive
-from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer
+from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer, CommentSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Posts, Followers, Likes
+from .models import Posts, Followers, Likes, Comments
 from user.models import CustomUser
 from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
 from .tasks import create_and_push_notification
@@ -159,7 +159,7 @@ class LikeDislikePost(APIView):
         try:
             like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
             like.delete()
-            return Response({'data': {'liked': False}, 'msg': 'Disliked', 'error_msg': {}},
+            return Response({'data': {'liked': False}, 'msg': 'Unliked', 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         except Likes.DoesNotExist:
             like = Likes.objects.create(parent_post_id=post, user=user)
@@ -173,28 +173,64 @@ class LikeDislikeComment(APIView):
     permission_classes = [IsSessionActive]
 
     def post(self, request, pk):
-        # Looking if a post object exists which is to be liked
+        # Looking if a comment object exists with comment_id which is to be liked or disliked.
+        try:
+            post = Comments.objects.get(id=pk)
+        except Comments.DoesNotExist:
+            return Response({'data': {}, 'msg': 'No such comment exists', 'error_msg': {}},
+                            status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+
+# Looking if a user already Liked the comment if it is than we delete the like else we create a new like instance
+        try:
+            like = Likes.objects.get(parent_comment_id__id=pk, user__id=user.id)
+            like.delete()
+            return Response({'data': {'liked': False}, 'msg': 'Unliked', 'error_msg': {}},
+                            status=status.HTTP_201_CREATED)
+        except Likes.DoesNotExist:
+            like = Likes.objects.create(parent_comment_id=post, user=user)
+
+        return Response({'data': {'liked': True}, 'msg': 'Liked the comment', 'error_msg': {}},
+                        status=status.HTTP_201_CREATED)
+
+
+class CommentView(APIView):
+    permission_classes = [IsSessionActive]
+
+    def post(self, request, pk):
+        # Looking if a post object exists on which comment needs to be post
         try:
             post = Posts.objects.get(id=pk)
         except Posts.DoesNotExist:
             return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
                             status=status.HTTP_404_NOT_FOUND)
         user = request.user
+        data = request.data.copy()
+        data['post'] = post.id
+        data['user'] = user.id
+        serializer = CommentSerializer(data=data)
 
-        #  Looking if a user already Liked the post if it is than we delete the like else we create a new like instance
-        try:
-            like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
-            like.delete()
-            return Response({'data': {'liked': False}, 'msg': 'Disliked', 'error_msg': {}},
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg': 'Commented successfully !!!', 'data': serializer.data, 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
-        except Likes.DoesNotExist:
-            like = Likes.objects.create(parent_post_id=post, user=user)
-
-        return Response({'data': {'liked': True}, 'msg': 'Liked', 'error_msg': {}},
-                        status=status.HTTP_201_CREATED)
+        else:
+            return get_errors(serializer)
 
 
+# Get Api to send back the all the comments on a particular post when user requests it
+class AllCommentsPost(APIView):
+    permission_classes = [IsSessionActive]
 
+    def get(self, request, pk):
+        try:
+            post = Posts.objects.get(id=pk)
+        except Posts.DoesNotExist:
+            return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
+                            status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        comments = Comments.objects.filter(user__id=user.id, post__id=pk).order_by('-created_at')
+        pass
 
 
 
