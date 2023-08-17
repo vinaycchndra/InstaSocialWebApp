@@ -34,13 +34,13 @@ class FollowerSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comments
-        fields = ['user', 'post', 'photo', 'comment']
+        fields = ['id', 'user', 'post', 'photo', 'comment']
 
     def validate(self, attrs):
         photo = attrs.get('photo')
         comment = attrs.get('comment')
 
-        if photo is None and comment is None:
+        if photo is None and (comment is None or len(comment) == 0):
             raise serializers.ValidationError('Both comment and photo cannot be null')
         return attrs
 

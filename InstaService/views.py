@@ -75,7 +75,7 @@ class InstaPost(APIView):
                                                 retry_policy={'max_retries': 3})
 
                 return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}},
-                                status=status.HTTP_204_NO_CONTENT)
+                                status=status.HTTP_200_OK)
             return Response({'data': {}, 'msg': 'You do not have permission to edit this post', 'error_msg': {}},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response({'data': {}, 'msg': 'Post does not exist', 'error_msg': {}},
@@ -197,11 +197,17 @@ class LikeDislikeComment(APIView):
 class CommentView(APIView):
     permission_classes = [IsSessionActive]
 
+    def get(self, request, pk):
+        comment_obj = self.get_comment(pk)
+        if comment_obj:
+            serializer = CommentSerializer(comment_obj)
+            return Response({'data': serializer.data, 'msg': 'Ok', 'error_msg': {}}, status=status.HTTP_200_OK)
+        return Response({'data': {}, 'msg': 'Not Found !', 'error_msg': {}}, status=status.HTTP_404_NOT_FOUND)
+
     def post(self, request, pk):
-        # Looking if a post object exists on which comment needs to be post
-        try:
-            post = Posts.objects.get(id=pk)
-        except Posts.DoesNotExist:
+# if a post object exists on which comment needs to be post and here the pk is the post id not the comment id
+        post = self.get_post(pk)
+        if post is None:
             return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
                             status=status.HTTP_404_NOT_FOUND)
         user = request.user
@@ -216,6 +222,46 @@ class CommentView(APIView):
                             status=status.HTTP_201_CREATED)
         else:
             return get_errors(serializer)
+
+    def patch(self, request, pk):
+        comment_obj = self.get_comment(pk)
+        if comment_obj:
+            if request.user.id == comment_obj.user.id:
+                serializer = CommentSerializer(comment_obj, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({'data': serializer.data, 'msg': 'Ok', 'error_msg': {}}, status=status.HTTP_200_OK)
+                return get_errors(serializer)
+            return Response({'data': {}, 'msg': 'You do not have permission to edit this comment', 'error_msg': {}},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({'data': {}, 'msg': 'Not Found !', 'error_msg': {}}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        comment_obj = self.get_comment(pk)
+        if comment_obj:
+            if request.user.id == comment_obj.user.id:
+                comment_obj.delete()
+                return Response({'data': {}, 'msg': 'Deleted Successfully !', 'error_msg': {}},
+                                status=status.HTTP_200_OK)
+            return Response({'data': {}, 'msg': 'You do not have permission to delete this comment', 'error_msg': {}},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({'data': {}, 'msg': 'Not Found !', 'error_msg': {}}, status=status.HTTP_404_NOT_FOUND)
+
+    def get_post(self, pk):
+        try:
+            post = Posts.objects.get(id=pk)
+        except Posts.DoesNotExist:
+            return None
+
+        return post
+
+    def get_comment(self, pk):
+        try:
+            comment = Comments.objects.get(id=pk)
+        except Comments.DoesNotExist:
+            return None
+
+        return comment
 
 
 # Get Api to send back the all the comments on a particular post when user requests it
