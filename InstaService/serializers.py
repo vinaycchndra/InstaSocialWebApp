@@ -44,3 +44,10 @@ class CommentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Both comment and photo cannot be null')
         return attrs
 
+
+# Create list Comment Serializer
+class ListCommentSerializer(serializers.ModelSerializer):
+    your_comment = serializers.BooleanField()
+    class Meta:
+        model = Comments
+        fields = ['id', 'user', 'post', 'photo', 'comment', 'your_comment']

@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from instagram.CustomPermission import IsSessionActive
-from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer, CommentSerializer
+from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer, CommentSerializer, ListCommentSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Posts, Followers, Likes, Comments
 from user.models import CustomUser
 from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
 from .tasks import create_and_push_notification
+from django.db.models import Case, BooleanField, Value, When
 
 
 def get_errors(serializer):
@@ -205,7 +206,7 @@ class CommentView(APIView):
         return Response({'data': {}, 'msg': 'Not Found !', 'error_msg': {}}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, pk):
-# if a post object exists on which comment needs to be post and here the pk is the post id not the comment id
+        # if a post object exists on which comment needs to be post and here the pk is the post id not the comment id
         post = self.get_post(pk)
         if post is None:
             return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
@@ -274,9 +275,17 @@ class AllCommentsPost(APIView):
         except Posts.DoesNotExist:
             return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
                             status=status.HTTP_404_NOT_FOUND)
-        user = request.user
-        comments = Comments.objects.filter(user__id=user.id, post__id=pk).order_by('-created_at')
-        pass
+
+        # writing a case statement in the django query to add the another field
+        cases = [
+            When(user__id=request.user.id, then=Value(True)),
+        ]
+
+        # Create a Case expression to categorize orders based on status
+        your_comment = Case(*cases, default=Value(False), output_field=BooleanField())
+        comments = Comments.objects.annotate(your_comment=your_comment).filter(post__id=pk).order_by('-created_at')
+        serializer = ListCommentSerializer(comments, many=True)
+        return Response({'data': serializer.data, 'msg': 'Ok', 'error_msg': {}}, status=status.HTTP_200_OK)
 
 
 
