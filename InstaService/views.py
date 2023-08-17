@@ -265,7 +265,8 @@ class CommentView(APIView):
         return comment
 
 
-# Get Api to send back the all the comments on a particular post when user requests it
+# Get Api to send back the all the comments on a particular post when user
+# requests it with label of user's comment and liked comment
 class AllCommentsPost(APIView):
     permission_classes = [IsSessionActive]
 
@@ -276,14 +277,29 @@ class AllCommentsPost(APIView):
             return Response({'data': {}, 'msg': 'No such Post exists', 'error_msg': {}},
                             status=status.HTTP_404_NOT_FOUND)
 
-        # writing a case statement in the django query to add the another field
-        cases = [
+        # querying all the Like of the user from the Like model for comments
+        # to get all the comments which are liked by user which can be used below to
+        # set status of the comments which is liked or not by the user who is requesting all the comments on a post
+
+        liked_comment_ids = Likes.objects.filter(user__id=request.user.id, parent_post_id=None).\
+            values_list('parent_comment_id', flat=True)
+        liked_comment_ids_set = set(liked_comment_ids)
+
+        # Writing a case statement in the django query to add the another field which
+        # defines if you liked that particular comment or not
+        case1 = [
             When(user__id=request.user.id, then=Value(True)),
         ]
 
-        # Create a Case expression to categorize orders based on status
-        your_comment = Case(*cases, default=Value(False), output_field=BooleanField())
-        comments = Comments.objects.annotate(your_comment=your_comment).filter(post__id=pk).order_by('-created_at')
+        case2 = [
+            When(id__in=liked_comment_ids_set, then=Value(True)),
+        ]
+
+        your_comment = Case(*case1, default=Value(False), output_field=BooleanField())
+        you_liked = Case(*case2, default=Value(False), output_field=BooleanField())
+
+        comments = Comments.objects.annotate(your_comment=your_comment, you_liked=you_liked).filter(post__id=pk).\
+            order_by('-created_at')
         serializer = ListCommentSerializer(comments, many=True)
         return Response({'data': serializer.data, 'msg': 'Ok', 'error_msg': {}}, status=status.HTTP_200_OK)
 

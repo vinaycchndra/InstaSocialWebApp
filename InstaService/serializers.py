@@ -48,6 +48,7 @@ class CommentSerializer(serializers.ModelSerializer):
 # Create list Comment Serializer
 class ListCommentSerializer(serializers.ModelSerializer):
     your_comment = serializers.BooleanField()
+    you_liked = serializers.BooleanField()
     class Meta:
         model = Comments
-        fields = ['id', 'user', 'post', 'photo', 'comment', 'your_comment']
+        fields = ['id', 'user', 'post', 'photo', 'comment', 'your_comment', 'you_liked', 'created_at']
