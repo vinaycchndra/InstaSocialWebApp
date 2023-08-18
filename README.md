@@ -21,3 +21,19 @@ to remove the complexity of handling both the types because in our model we have
 
 2. There is an API to send back all the comments on a particular post for any logged-in user which appears in either of user's feed or user sees it though other user's profile page....
 
+APIs list:
+1. List of all comments with added fields liked and your comment. 
+2. Update a comment
+3. delete a comment 
+4. create a comment 
+5. get a comment
+6. like a comment 
+7. unlike a comment
+8. like a post
+9. unlike a post
+10. follow a user 
+11. unfollow a user
+12. create a post
+13. get a post
+14. delete a post
+15. update a post
