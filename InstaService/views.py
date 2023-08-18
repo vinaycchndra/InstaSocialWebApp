@@ -3,11 +3,12 @@ from instagram.CustomPermission import IsSessionActive
 from .serializers import CreatePostSerializer, UpdatePostSerializer, FollowerSerializer, CommentSerializer, ListCommentSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Posts, Followers, Likes, Comments
+from .models import Posts, Followers, Likes, Comments, LikeCountPost, LikeCountComment
 from user.models import CustomUser
 from UserFeedService.tasks import add_feed, remove_feed, after_post_feed, remove_deleted_post
 from .tasks import create_and_push_notification
 from django.db.models import Case, BooleanField, Value, When
+from django.db import transaction
 
 
 def get_errors(serializer):
@@ -25,7 +26,11 @@ class InstaPost(APIView):
         data['posted_by'] = request.user.id
         serializer = CreatePostSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
+            obj_new = serializer.save()
+
+            # Creating one to one like field for the post
+            like_count = LikeCountPost(post=obj_new)
+            like_count.save()
 
             # Getting the list of all the followers of the user
             post_id = serializer.data['id']
@@ -160,13 +165,29 @@ class LikeDislikePost(APIView):
         try:
             like = Likes.objects.get(parent_post_id__id=pk, user__id=user.id)
             like.delete()
+            self.update_like_count(post, False)
+
             return Response({'data': {'liked': False}, 'msg': 'Unliked', 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         except Likes.DoesNotExist:
             like = Likes.objects.create(parent_post_id=post, user=user)
+            self.update_like_count(post, True)
 
         return Response({'data': {'liked': True}, 'msg': 'Liked', 'error_msg': {}},
                         status=status.HTTP_201_CREATED)
+
+    def update_like_count(self, post, increase):
+        with transaction.atomic(using='auth_db'):
+            # Apply select_for_update() to apply lock on updating the like count value
+            like_count_obj = LikeCountPost.objects.select_for_update().get(id=post.likecountpost.id)
+
+            if increase:
+                like_count_obj.like_count = like_count_obj.like_count+1
+            else:
+                if like_count_obj.like_count>0:
+                    like_count_obj.like_count = like_count_obj.like_count - 1
+
+            like_count_obj.save()
 
 
 # Class view to like or dislike a comment
@@ -176,7 +197,7 @@ class LikeDislikeComment(APIView):
     def post(self, request, pk):
         # Looking if a comment object exists with comment_id which is to be liked or disliked.
         try:
-            post = Comments.objects.get(id=pk)
+            comment = Comments.objects.get(id=pk)
         except Comments.DoesNotExist:
             return Response({'data': {}, 'msg': 'No such comment exists', 'error_msg': {}},
                             status=status.HTTP_404_NOT_FOUND)
@@ -186,13 +207,27 @@ class LikeDislikeComment(APIView):
         try:
             like = Likes.objects.get(parent_comment_id__id=pk, user__id=user.id)
             like.delete()
+            self.update_like_count(comment, False)
             return Response({'data': {'liked': False}, 'msg': 'Unliked', 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         except Likes.DoesNotExist:
-            like = Likes.objects.create(parent_comment_id=post, user=user)
-
+            like = Likes.objects.create(parent_comment_id=comment, user=user)
+            self.update_like_count(comment, True)
         return Response({'data': {'liked': True}, 'msg': 'Liked the comment', 'error_msg': {}},
                         status=status.HTTP_201_CREATED)
+
+    def update_like_count(self, comment, increase):
+        with transaction.atomic(using='auth_db'):
+            # Apply select_for_update() to apply lock on updating the like count value
+            like_count_obj = LikeCountComment.objects.select_for_update().get(id=comment.likecountcomment.id)
+
+            if increase:
+                like_count_obj.like_count = like_count_obj.like_count + 1
+            else:
+                if like_count_obj.like_count > 0:
+                    like_count_obj.like_count = like_count_obj.like_count - 1
+
+            like_count_obj.save()
 
 
 class CommentView(APIView):
@@ -218,7 +253,12 @@ class CommentView(APIView):
         serializer = CommentSerializer(data=data)
 
         if serializer.is_valid():
-            serializer.save()
+            comment_obj = serializer.save()
+
+            # creating one to one field for the like count on the comment
+            like_comment = LikeCountComment(comment=comment_obj)
+            like_comment.save()
+
             return Response({'msg': 'Commented successfully !!!', 'data': serializer.data, 'error_msg': {}},
                             status=status.HTTP_201_CREATED)
         else:

@@ -21,6 +21,15 @@ to remove the complexity of handling both the types because in our model we have
 
 2. There is an API to send back all the comments on a particular post for any logged-in user which appears in either of user's feed or user sees it though other user's profile page....
 
+3. To provide a like count on a post or on a comment we are looking for denormalization techniques which is storing it as a field 
+   within the post or comment table field only to fasten the query for likes on a post. However, we have separate like model which separately creates a like object for either post or comment. 
+   But this is not really helping because it will create issue as we apply locking of entry to avoid simultaneous updation such as if one is trying to update the post and simultaneously people are liking the post in that
+   case user who owns the post will not be able to update the post as other users are liking the post continuously in such case we can create a one to one field in another table
+   wich we can lock from the point of concurrency to update like count which will also enable the post editing simultaneously.
+   
+4. Creating tables to store like count for both 
+
+
 APIs list:
 1. List of all comments with added fields liked and your comment. 
 2. Update a comment
@@ -37,3 +46,4 @@ APIs list:
 13. get a post
 14. delete a post
 15. update a post
+16. get feed for a user api

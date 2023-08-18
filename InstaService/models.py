@@ -60,3 +60,19 @@ class Notification(models.Model):
     is_seen = models.BooleanField(default=False)
 
 
+# One to One field for post to store the like count
+class LikeCountPost(models.Model):
+    like_count = models.IntegerField(default=0)
+    post = models.OneToOneField(Posts, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.id)
+
+
+# One to One field for comment to store the like count on a comment
+class LikeCountComment(models.Model):
+    like_count = models.IntegerField(default=0)
+    comment = models.OneToOneField(Comments, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return str(self.id)
